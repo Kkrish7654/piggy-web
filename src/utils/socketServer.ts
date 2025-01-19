@@ -2,7 +2,7 @@ import { io, Socket } from "socket.io-client";
 
 // const SOCKET_URL = "http://192.168.242.175:8000/events";
 
-const SOCKET_URL = "https://64c8-2409-40e4-2059-cf20-11e1-dd89-5e36-fff4.ngrok-free.app/events"
+const SOCKET_URL = "https://ab6b-2409-40e4-2059-cf20-11e1-dd89-5e36-fff4.ngrok-free.app/events"
 
 class WSSocket {
   public socket!: Socket;
