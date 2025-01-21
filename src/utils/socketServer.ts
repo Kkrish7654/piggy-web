@@ -1,15 +1,19 @@
+import { AppRouterInstance } from "next/dist/shared/lib/app-router-context.shared-runtime";
 import { io, Socket } from "socket.io-client";
 
-// const SOCKET_URL = "http://192.168.242.175:8000/events";
-
-const SOCKET_URL = "https://ab6b-2409-40e4-2059-cf20-11e1-dd89-5e36-fff4.ngrok-free.app/events"
-
+// const SOCKET_URL = "http://localhost:7000/events";
+const SOCKET_URL = `${process.env.NEXT_PUBLIC_SOCKET_URL}/events`;
 class WSSocket {
   public socket!: Socket;
 
   constructor() {
     this.socket = io(SOCKET_URL, {
-      transports: ["websocket"],
+      transports: ['websocket', 'polling'],
+      secure: true,
+      rejectUnauthorized: false,
+      reconnection: true,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000
     });
   }
 
@@ -95,6 +99,39 @@ class WSSocket {
     this.socket.on("newMessage", (message) => {
       console.log(message, "msg");
       callback(message);
+    });
+  };
+
+  listenAvailableRooms = (
+    callback: (rooms: { roomId: string; roomName: string }[]) => void
+  ) => {
+    this.socket.emit("fetchRooms");
+    this.socket.on("getRooms", (rooms) => {
+      callback(rooms);
+    });
+  };
+
+  deleteRoom = (roomId: string) => {
+    this.socket.emit("deleteRoom", {
+      roomId: roomId,
+    });
+  };
+
+  redirectAfterRoomDelete = (router: AppRouterInstance) => {
+    this.socket.on("roomDeleted", () => {
+      console.log(`Room has been deleted`);
+      router.push("/");
+    });
+
+    return () => {
+      this.socket.off("roomDeleted");
+    };
+  };
+
+  leaveRoom = (roomId: string, userName: string) => {
+    this.socket.emit("leaveRoom", {
+      roomId: roomId,
+      userName: userName,
     });
   };
 }

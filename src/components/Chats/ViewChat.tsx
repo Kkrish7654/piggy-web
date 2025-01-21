@@ -1,9 +1,9 @@
 "use client"
 
 import socketService from '@/utils/socketServer'
-import { Box, Button, Divider,TextField, Typography } from '@mui/material'
-import { useSearchParams } from 'next/navigation'
-import React, { useEffect } from 'react'
+import { Box, Button,TextField, Typography } from '@mui/material'
+import { useSearchParams, useRouter, usePathname } from 'next/navigation'
+import React, { useEffect, useRef } from 'react'
 import toast, { Toaster } from 'react-hot-toast'
 
 const ViewChat = ({roomId}: {roomId: string}) => {
@@ -33,6 +33,9 @@ const ViewChat = ({roomId}: {roomId: string}) => {
     }[]>([])
 
 
+    const router = useRouter()
+    const pathName = usePathname()
+    const prevPathName = useRef(pathName)
 
 
     useEffect(() => {
@@ -56,6 +59,27 @@ const ViewChat = ({roomId}: {roomId: string}) => {
     },[roomId, user])
 
 
+    useEffect(() => {
+        return () => {
+            socketService.leaveRoom(roomId, user || "")
+        }
+    },[])
+
+    useEffect(() => {
+        if (prevPathName.current !== pathName) {
+          if (prevPathName.current === `/chat/${roomId}`) {
+            socketService.leaveRoom(roomId, user || '');
+          }
+          prevPathName.current = pathName;
+        }
+
+        socketService.peopleInRoom((people) => {
+            setPerson(people)
+        })
+    }, [pathName, roomId, user]);
+    
+
+
     function sendMessage() {
         if (userMessage.message.trim() !== "") {
             socketService.newMessage(userMessage);
@@ -66,8 +90,6 @@ const ViewChat = ({roomId}: {roomId: string}) => {
             });
         }
     }
-    
-
 
     useEffect(() => {
         socketService.listenForNewMessage((msg) => {
@@ -76,16 +98,26 @@ const ViewChat = ({roomId}: {roomId: string}) => {
     },[])
 
 
+    useEffect(() => {
+        socketService.redirectAfterRoomDelete(router)
+    },[router])
+
     return (
        <Box>
 
             <Toaster/>
 
-            <Typography variant="h6">
+            <Typography sx={{
+                fontSize: 12
+            }} variant="body1">
                 {message}
             </Typography>
 
-            <Typography variant="h6">
+            <Typography
+            sx={{
+                fontSize: 12
+            }}
+            variant="body1">
                 Peoples: {person.length}
             </Typography>
 
@@ -100,13 +132,10 @@ const ViewChat = ({roomId}: {roomId: string}) => {
             }}
             >
             {/* Header */}
-            <Typography variant="h4" textAlign="center">
+            <Typography variant="h6" textAlign="center">
                 Group Chat
             </Typography>
 
-        
-        
-            <Divider />
 
             {/* Chat Room */}
                 <Box
@@ -148,7 +177,7 @@ const ViewChat = ({roomId}: {roomId: string}) => {
                             userName: user as string,
                             message: e.target.value
                         })}
-                        // onKeyDown={(e) => e.key === "Enter" && sendMessage()}
+                        onKeyDown={(e) => e.key === "Enter" && sendMessage()}
                         />
                         <Button variant="contained" onClick={sendMessage}>
                             Send
